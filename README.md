@@ -1,6 +1,6 @@
 # Auto-Mine-Sweeper
 
-## Purpose
+### Purpose
 This is a Minesweeper game with the added option to automate the solution
 keeping in mind that sometimes it may be up to chance i decided to make the program make educated guesses in order to maximize the win rate
 (Also cus its fun and a nice challenge)
