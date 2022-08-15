@@ -40,15 +40,17 @@ class Scuare(pygame.sprite.Sprite):
         self.rect = rect
         self.size = size
         self.checked = False
+        self.arround = []
 
 class Grid():
-    def __init__(self, screen, mines, cuantity, startpos, size):
+    def __init__(self, screen, mines, cuantity, startpos, size):#OPTIMIZAR LA CARGA
         self.screen = screen
         self.mines = mines
         self.started = False
         self.cuantity = cuantity
         self.size = size
         self.startpos = startpos
+
         self.scu1 = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/1.png').convert(), size)
         self.scu2 = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/2.png').convert(), size)
         self.scu3 = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/3.png').convert(), size)
@@ -62,10 +64,21 @@ class Grid():
         self.empty = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/empty.png').convert(), size)
         self.mine = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/mine.png').convert(), size)
         self.explodedmine = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/exploded mine.png').convert(), size) 
+        #creates all the scuare objects
         self.grid = pygame.sprite.Group()
         for x in range(startpos[0],startpos[0]+cuantity[0]*size[0],size[0]):
             for y in range(startpos[1],startpos[1]+cuantity[1]*size[1],size[1]):
                 self.grid.add(Scuare(self.scuare,(x,y),size))
+        #connects all the scuares arround eachother starts the slow
+        for scuare in self.grid:
+            print("-")
+            area = [(scuare.rect[0]-20,scuare.rect[1]+20),(scuare.rect[0],scuare.rect[1]+20),(scuare.rect[0]+20,scuare.rect[1]+20),(scuare.rect[0]-20,scuare.rect[1]),(scuare.rect[0]+20,scuare.rect[1]),(scuare.rect[0]-20,scuare.rect[1]-20),(scuare.rect[0],scuare.rect[1]-20),(scuare.rect[0]+20,scuare.rect[1]-20)]
+            for subscuare in self.grid:
+                print("  -")#add vectors so its easier to check
+                for a in area:
+                    rect = pygame.Rect(subscuare.rect[0],subscuare.rect[1],subscuare.size[0],subscuare.size[1])
+                    if pygame.Rect.collidepoint(rect,a):
+                        scuare.arround.append(subscuare)
 
     def image(self, scuare):
         if not scuare.visible:
@@ -154,16 +167,13 @@ class Grid():
             for scuare in self.grid:
                 if scuare.type == "empty" and scuare.visible and not scuare.checked:
                     scuare.checked = True
-                    #cuadros que se encuentran alrededor del original
-                    for subscuare in self.grid:
-                        rect = pygame.Rect(subscuare.rect[0],subscuare.rect[1],subscuare.size[0],subscuare.size[1])
-                        area = [(scuare.rect[0]-20,scuare.rect[1]+20),(scuare.rect[0],scuare.rect[1]+20),(scuare.rect[0]+20,scuare.rect[1]+20),(scuare.rect[0]-20,scuare.rect[1]),(scuare.rect[0]+20,scuare.rect[1]),(scuare.rect[0]-20,scuare.rect[1]-20),(scuare.rect[0],scuare.rect[1]-20),(scuare.rect[0]+20,scuare.rect[1]-20)]
-                        for a in area:
-                            if pygame.Rect.collidepoint(rect,a):
-                                    looking = True
-                                    subscuare.visible = True
-                        self.image(subscuare)
-    
+                    looking = True
+                    for a in scuare.arround:
+                        if not a.visible:
+                            looking = True
+                            a.visible = True
+                        self.image(a)
+                        
     def rightclick(self, pos, flags):
         for scuare in self.grid:
             if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
