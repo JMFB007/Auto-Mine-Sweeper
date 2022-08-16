@@ -1,35 +1,12 @@
 import pygame, random
 from pygame import mixer
+from Button import Button
 
 ScreenSize = (800,600)
-Difficulty = 2
+Difficulty = 1
 Multiplier = 25
 #MaxScuares = (38,24)
 #MineSize = (20,20)
-
-class Button():
-    def __init__(self,screen,bgcolor,txt,txtcolor,font,posx,posy,width,height):
-        self.screen = screen
-        self.bgcolor = bgcolor
-        self.txt = txt
-        self.txtcolor = txtcolor
-        self.font = font
-        self.posx = posx
-        self.posy = posy
-        self.width = width
-        self.height = height
-        self.button = pygame.draw.rect(self.screen,self.bgcolor,pygame.Rect(self.posx,self.posy,self.width,self.height))
-    
-    def check_click(self,pos):
-        if pygame.Rect.collidepoint(self.button,pos):
-            return True
-        return False
-
-    def show(self, txt):
-        pygame.draw.rect(self.screen,self.bgcolor,pygame.Rect(self.posx,self.posy,self.width,self.height))
-        text = self.font.render(txt,True, self.txtcolor)
-        text_rect = text.get_rect(center=(self.posx+self.width/2,self.posy+self.height/2))
-        self.screen.blit(text, text_rect)
 
 class Scuare(pygame.sprite.Sprite):
     def __init__(self, image, rect, size):
@@ -222,17 +199,17 @@ class Grid():
             self.image(scuare)
     
     def winlose(self):
-        gamestate = 1
+        gamestate = "playing"
         flaggedmines = 0
         for scuare in self.grid:
             if scuare.type == "explodedmine":
                 gamestate = "lose"
-                print(gamestate)
             elif scuare.type == "mine":
                 if scuare.flagged:
                     flaggedmines += 1
         if flaggedmines == self.mines:
             gamestate = "win"
+        if gamestate != "playing":
             print(gamestate)
         return gamestate
 
@@ -245,47 +222,73 @@ class Grid():
         for y in range(self.startpos[1],self.startpos[1]+480+1,self.size[1]):
             pygame.draw.line(self.screen,(0,100,0),(self.startpos[0],y),(self.startpos[0]+760,y))
 
-class Game():
+class Start():
+    def __init__(self, screen, font):
+        self.screen = screen
+        self.font = font
+        self.state = "start"
+        self.playbutton = Button(screen,(63, 97, 1),(0,0,0),self.font,20,20,240,60)
+        self.exitbutton = Button(screen,(63, 97, 1),(0,0,0),self.font,540,20,240,60)
+  
+    def events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.state = "quit"
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mousepos = pygame.mouse.get_pos()
+                if self.playbutton.check_click(mousepos):
+                    self.state = "playing"
+                if self.exitbutton.check_click(mousepos):
+                    self.state = "quit"
+
+    def show(self):
+        #background
+        self.screen.fill((169, 237, 43))
+        #shows start and exit
+        self.playbutton.show("Play")
+        self.exitbutton.show("Exit")
+        pygame.display.flip()
+
+    def run(self):
+        while self.state == "start":
+            self.events()
+            self.show()
+        return self.state
+
+class Game():#playing leave win loose
     def __init__(self, screen, font, difficulty, multiplier):
         self.screen = screen
         self.font = font
-        self.state = 1
+        self.state = "playing"
         self.mines = difficulty*multiplier
         self.flags = difficulty*multiplier
-        self.autobutton = Button(screen,(63, 97, 1),"Auto",(0,0,0),self.font,20,20,240,60)
-        self.flagsbutton = Button(screen,(63, 97, 1),f"Flags: {self.flags}",(168, 27, 27),self.font,280,20,240,60)
-        self.exitbutton = Button(screen,(63, 97, 1),"Exit",(0,0,0),self.font,540,20,240,60)
+        self.autobutton = Button(screen,(63, 97, 1),(0,0,0),self.font,20,20,240,60)
+        self.flagsbutton = Button(screen,(63, 97, 1),(168, 27, 27),self.font,280,20,240,60)
+        self.exitbutton = Button(screen,(63, 97, 1),(0,0,0),self.font,540,20,240,60)
         self.grid = Grid(screen,self.mines,(38,24),(20,100),(20,20))
   
     def events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.state = 2
-            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.state = "quit"
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 state = pygame.mouse.get_pressed()
                 mousepos = pygame.mouse.get_pos()
                 if state[0]:#left click
                     if self.exitbutton.check_click(mousepos):
-                        self.state = 2
-                    elif self.flagsbutton.check_click(mousepos):#show all
-                        if self.grid.started:
+                        self.state = "start"
+                    elif self.grid.started:
+                        if self.flagsbutton.check_click(mousepos):
                             self.grid.revealall()
-                    elif self.autobutton.check_click(mousepos):#automate
-                        if self.grid.started:
+                        if self.autobutton.check_click(mousepos):
                             print("wip")
-                            #self.grid.revealall()
-                    else:
+                    if self.state == "playing":
                         self.grid.leftclick(mousepos)
                 if state[2]:#right click
-                    if self.grid.started:
+                    if self.grid.started and self.state == "playing":
                         self.flags = self.grid.rightclick(mousepos, self.flags)
-                if self.state != 2:
+                if self.state == "playing":
                     self.state = self.grid.winlose()
-                    if self.state != 1:
-                        if self.state == "win":
-                            self.state = 2
-                        if self.state == "lose":
-                            self.state = 2
 
     def show(self):
         #background
@@ -298,13 +301,15 @@ class Game():
         self.grid.show()
         pygame.display.flip()
 
-    def run(self):#1 = playing 2 = leave
-        while self.state == 1:
+    def run(self):
+        while self.state == "playing":
             self.events()
             self.show()
+        if self.state == "loose":
+            pygame.time.delay(3000)
         return self.state
 
-def main():
+def main():#start playing quit win loose
     pygame.init()
     mixer.pre_init(44100, 16, 2, 4096)
     mixer.init()
@@ -314,8 +319,14 @@ def main():
     pygame.display.set_caption("Mine Sweeper + Auto")
     pygame.font.init()
     Font = pygame.font.SysFont('Comic Sans MS', 30)
-    game = Game(Screen,Font,Difficulty,Multiplier)#starts the game loop, 1=main menu, 2=game, 3=restart or exit
-    game.run()
+    gamestate = "start"
+    while gamestate != "quit":
+        if gamestate == "start":
+            start = Start(Screen,Font)
+            gamestate = start.run()
+        if gamestate == "playing":
+            game = Game(Screen,Font,Difficulty,Multiplier)
+            gamestate = game.run()
     pygame.quit()
 
 if __name__ == "__main__":
