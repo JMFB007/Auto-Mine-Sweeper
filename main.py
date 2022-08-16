@@ -2,7 +2,8 @@ import pygame, random
 from pygame import mixer
 
 ScreenSize = (800,600)
-Difficulty = 5#multiplies by 15
+Difficulty = 2
+Multiplier = 25
 #MaxScuares = (38,24)
 #MineSize = (20,20)
 
@@ -43,7 +44,7 @@ class Scuare(pygame.sprite.Sprite):
         self.arround = []
 
 class Grid():
-    def __init__(self, screen, mines, cuantity, startpos, size):#OPTIMIZAR LA CARGA
+    def __init__(self, screen, mines, cuantity, startpos, size):
         self.screen = screen
         self.mines = mines
         self.started = False
@@ -66,19 +67,40 @@ class Grid():
         self.explodedmine = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/exploded mine.png').convert(), size) 
         #creates all the scuare objects
         self.grid = pygame.sprite.Group()
-        for x in range(startpos[0],startpos[0]+cuantity[0]*size[0],size[0]):
-            for y in range(startpos[1],startpos[1]+cuantity[1]*size[1],size[1]):
-                self.grid.add(Scuare(self.scuare,(x,y),size))
-        #connects all the scuares arround eachother starts the slow
-        for scuare in self.grid:
-            print("-")
-            area = [(scuare.rect[0]-20,scuare.rect[1]+20),(scuare.rect[0],scuare.rect[1]+20),(scuare.rect[0]+20,scuare.rect[1]+20),(scuare.rect[0]-20,scuare.rect[1]),(scuare.rect[0]+20,scuare.rect[1]),(scuare.rect[0]-20,scuare.rect[1]-20),(scuare.rect[0],scuare.rect[1]-20),(scuare.rect[0]+20,scuare.rect[1]-20)]
-            for subscuare in self.grid:
-                print("  -")#add vectors so its easier to check
-                for a in area:
-                    rect = pygame.Rect(subscuare.rect[0],subscuare.rect[1],subscuare.size[0],subscuare.size[1])
-                    if pygame.Rect.collidepoint(rect,a):
-                        scuare.arround.append(subscuare)
+        matrix = [[Scuare(self.scuare,(0,0),(0,0)) for y in range(cuantity[1])] for x in range(cuantity[0])]
+        for x in range(cuantity[0]):
+            for y in range(cuantity[1]):
+                matrix[x][y] = Scuare(self.scuare,(startpos[0]+(x*size[0]),startpos[1]+(y*size[1])),size)
+                self.grid.add(matrix[x][y])
+        #connects all the scuares arround eachother
+        for x in range(cuantity[0]):
+            for y in range(cuantity[1]):
+                left = False
+                right = False
+                up = False
+                down = False
+                if x != 0:
+                    matrix[x][y].arround.append(matrix[x-1][y])
+                    left = True
+                if x != cuantity[0]-1:
+                    matrix[x][y].arround.append(matrix[x+1][y])
+                    right = True
+                if y != 0:
+                    matrix[x][y].arround.append(matrix[x][y-1])
+                    up = True
+                if y != cuantity[1]-1:
+                    matrix[x][y].arround.append(matrix[x][y+1])
+                    down = True
+                if up:
+                    if left:
+                        matrix[x][y].arround.append(matrix[x-1][y-1])
+                    if right:
+                        matrix[x][y].arround.append(matrix[x+1][y-1])
+                if down:
+                    if left:
+                        matrix[x][y].arround.append(matrix[x-1][y+1])
+                    if right:
+                        matrix[x][y].arround.append(matrix[x+1][y+1])
 
     def image(self, scuare):
         if not scuare.visible:
@@ -155,11 +177,11 @@ class Grid():
                             elif type(subscuare.type) == int:
                                 subscuare.type += 1
         self.started = True
+        for scuare in self.grid:
+            scuare.checked = False
         self.search()
 
     def search(self):
-        for scuare in self.grid:
-            scuare.checked = False
         looking = True
         while looking:
             looking = False
@@ -167,11 +189,10 @@ class Grid():
             for scuare in self.grid:
                 if scuare.type == "empty" and scuare.visible and not scuare.checked:
                     scuare.checked = True
-                    looking = True
                     for a in scuare.arround:
                         if not a.visible:
                             looking = True
-                            a.visible = True
+                        a.visible = True
                         self.image(a)
                         
     def rightclick(self, pos, flags):
@@ -225,12 +246,12 @@ class Grid():
             pygame.draw.line(self.screen,(0,100,0),(self.startpos[0],y),(self.startpos[0]+760,y))
 
 class Game():
-    def __init__(self, screen, font, difficulty):
+    def __init__(self, screen, font, difficulty, multiplier):
         self.screen = screen
         self.font = font
         self.state = 1
-        self.mines = difficulty*15
-        self.flags = difficulty*15
+        self.mines = difficulty*multiplier
+        self.flags = difficulty*multiplier
         self.autobutton = Button(screen,(63, 97, 1),"Auto",(0,0,0),self.font,20,20,240,60)
         self.flagsbutton = Button(screen,(63, 97, 1),f"Flags: {self.flags}",(168, 27, 27),self.font,280,20,240,60)
         self.exitbutton = Button(screen,(63, 97, 1),"Exit",(0,0,0),self.font,540,20,240,60)
@@ -293,7 +314,7 @@ def main():
     pygame.display.set_caption("Mine Sweeper + Auto")
     pygame.font.init()
     Font = pygame.font.SysFont('Comic Sans MS', 30)
-    game = Game(Screen,Font,Difficulty)#starts the game loop, 1=main menu, 2=game, 3=restart or exit
+    game = Game(Screen,Font,Difficulty,Multiplier)#starts the game loop, 1=main menu, 2=game, 3=restart or exit
     game.run()
     pygame.quit()
 
