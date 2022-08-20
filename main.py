@@ -3,12 +3,12 @@ from pygame import mixer
 from Button import Button
 
 ScreenSize = (800,600)
-Difficulty = 1
+Difficulty = 3
 Multiplier = 25
 #MaxScuares = (38,24)
 #MineSize = (20,20)
 
-class Scuare(pygame.sprite.Sprite):
+class Scuare(pygame.sprite.Sprite):#visible flagged type checked probab arround
     def __init__(self, image, rect, size):
         super().__init__()
         self.visible = False
@@ -18,6 +18,7 @@ class Scuare(pygame.sprite.Sprite):
         self.rect = rect
         self.size = size
         self.checked = False
+        self.probab = 0
         self.arround = []
 
 class Grid():
@@ -25,6 +26,7 @@ class Grid():
         self.screen = screen
         self.mines = mines
         self.started = False
+        self.auto = False
         self.cuantity = cuantity
         self.size = size
         self.startpos = startpos
@@ -198,12 +200,12 @@ class Grid():
             scuare.visible = True
             self.image(scuare)
     
-    def winlose(self):
+    def winloose(self):
         gamestate = "playing"
         flaggedmines = 0
         for scuare in self.grid:
             if scuare.type == "explodedmine":
-                gamestate = "lose"
+                gamestate = "loose"
             elif scuare.type == "mine":
                 if scuare.flagged:
                     flaggedmines += 1
@@ -212,6 +214,31 @@ class Grid():
         if gamestate != "playing":
             print(gamestate)
         return gamestate
+    
+    def Auto(self):
+        for scuare in self.grid:
+            scuare.flagged = False
+        for x in range(self.cuantity[0]):
+            for y in range(self.cuantity[1]):
+                if self.matrix[x][y].visible and isinstance(self.matrix[x][y].type, int):
+                    closemines = self.matrix[x][y].type
+                    novis = 0
+                    flags = 0
+                    for s in self.matrix[x][y].arround:
+                        if s.visible == False:
+                            novis += 1
+                        if s.flagged == False:
+                            flags += 1
+                    if closemines == novis:
+                        for s in self.matrix[x][y].arround:
+                            if s.visible == False:
+                                s.flagged = True
+                    elif closemines == flags:
+                        for s in self.matrix[x][y].arround:
+                            if s.visible == False and s.flagged == False:
+                                s.visible = True
+                    else:
+                        pass#ohh boy here we go
 
     def show(self):
         #shows all scuares in the grid
@@ -266,7 +293,7 @@ class Game():#playing leave win loose
         self.flagsbutton = Button(screen,(63, 97, 1),(168, 27, 27),self.font,280,20,240,60)
         self.exitbutton = Button(screen,(63, 97, 1),(0,0,0),self.font,540,20,240,60)
         self.grid = Grid(screen,self.mines,(38,24),(20,100),(20,20))
-  
+
     def events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -281,6 +308,7 @@ class Game():#playing leave win loose
                         if self.flagsbutton.check_click(mousepos):
                             self.grid.revealall()
                         if self.autobutton.check_click(mousepos):
+                            #self.grid.Auto()
                             print("wip")
                     if self.state == "playing":
                         self.grid.leftclick(mousepos)
@@ -288,7 +316,7 @@ class Game():#playing leave win loose
                     if self.grid.started and self.state == "playing":
                         self.flags = self.grid.rightclick(mousepos, self.flags)
                 if self.state == "playing":
-                    self.state = self.grid.winlose()
+                    self.state = self.grid.winloose()
 
     def show(self):
         #background
@@ -327,6 +355,8 @@ def main():#start playing quit win loose
         if gamestate == "playing":
             game = Game(Screen,Font,Difficulty,Multiplier)
             gamestate = game.run()
+        if gamestate == "loose" or gamestate == "win":
+            gamestate = "quit"
     pygame.quit()
 
 if __name__ == "__main__":
