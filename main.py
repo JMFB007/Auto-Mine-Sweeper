@@ -21,10 +21,11 @@ class Scuare(pygame.sprite.Sprite):#visible flagged type checked probab arround
         self.probab = 0
         self.arround = []
 
-class Grid():
+class Grid():#(38,24),(20,100),(20,20)
     def __init__(self, screen, mines, cuantity, startpos, size):
         self.screen = screen
         self.mines = mines
+        self.flags = mines
         self.started = False
         self.auto = False
         self.cuantity = cuantity
@@ -46,11 +47,11 @@ class Grid():
         self.explodedmine = pygame.transform.smoothscale(pygame.image.load('Data/Graphics/exploded mine.png').convert(), size) 
         #creates all the scuare objects
         self.grid = pygame.sprite.Group()
-        matrix = [[Scuare(self.scuare,(0,0),(0,0)) for y in range(cuantity[1])] for x in range(cuantity[0])]
+        self.matrix = [[Scuare(self.scuare,(0,0),(0,0)) for y in range(cuantity[1])] for x in range(cuantity[0])]
         for x in range(cuantity[0]):
             for y in range(cuantity[1]):
-                matrix[x][y] = Scuare(self.scuare,(startpos[0]+(x*size[0]),startpos[1]+(y*size[1])),size)
-                self.grid.add(matrix[x][y])
+                self.matrix[x][y] = Scuare(self.scuare,(startpos[0]+(x*size[0]),startpos[1]+(y*size[1])),size)
+                self.grid.add(self.matrix[x][y])
         #connects all the scuares arround eachother
         for x in range(cuantity[0]):
             for y in range(cuantity[1]):
@@ -59,27 +60,27 @@ class Grid():
                 up = False
                 down = False
                 if x != 0:
-                    matrix[x][y].arround.append(matrix[x-1][y])
+                    self.matrix[x][y].arround.append(self.matrix[x-1][y])
                     left = True
                 if x != cuantity[0]-1:
-                    matrix[x][y].arround.append(matrix[x+1][y])
+                    self.matrix[x][y].arround.append(self.matrix[x+1][y])
                     right = True
                 if y != 0:
-                    matrix[x][y].arround.append(matrix[x][y-1])
+                    self.matrix[x][y].arround.append(self.matrix[x][y-1])
                     up = True
                 if y != cuantity[1]-1:
-                    matrix[x][y].arround.append(matrix[x][y+1])
+                    self.matrix[x][y].arround.append(self.matrix[x][y+1])
                     down = True
                 if up:
                     if left:
-                        matrix[x][y].arround.append(matrix[x-1][y-1])
+                        self.matrix[x][y].arround.append(self.matrix[x-1][y-1])
                     if right:
-                        matrix[x][y].arround.append(matrix[x+1][y-1])
+                        self.matrix[x][y].arround.append(self.matrix[x+1][y-1])
                 if down:
                     if left:
-                        matrix[x][y].arround.append(matrix[x-1][y+1])
+                        self.matrix[x][y].arround.append(self.matrix[x-1][y+1])
                     if right:
-                        matrix[x][y].arround.append(matrix[x+1][y+1])
+                        self.matrix[x][y].arround.append(self.matrix[x+1][y+1])
 
     def image(self, scuare):
         if not scuare.visible:
@@ -123,7 +124,7 @@ class Grid():
                         if scuare.type == "empty":
                             self.search()
                         self.image(scuare)
-        else:
+        elif self.startpos[0]<pos[0] and pos[0]<self.startpos[0]+(self.cuantity[0]*self.size[0]) and self.startpos[1]<pos[1] and pos[1]<self.startpos[1]+(self.cuantity[1]*self.size[1]):
             self.defineall(pos)
 
     def defineall(self,pos):
@@ -174,19 +175,19 @@ class Grid():
                         a.visible = True
                         self.image(a)
                         
-    def rightclick(self, pos, flags):
+    def rightclick(self, pos):
         for scuare in self.grid:
             if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
+                print(scuare.flagged," ",scuare.visible)
                 if not scuare.visible:
                     if scuare.flagged:#flag to scuare
                         scuare.flagged = False
                         self.image(scuare)
-                        flags += 1
-                    elif flags>0 and not scuare.flagged:#scuare to flag
+                        self.flags += 1
+                    elif self.flags>0 and not scuare.flagged:#scuare to flag
                         scuare.flagged = True
                         self.image(scuare)
-                        flags -= 1
-        return flags
+                        self.flags -= 1
     
     def revealmines(self):
         for scuare in self.grid:
@@ -217,28 +218,34 @@ class Grid():
     
     def Auto(self):
         for scuare in self.grid:
-            scuare.flagged = False
-        for x in range(self.cuantity[0]):
-            for y in range(self.cuantity[1]):
-                if self.matrix[x][y].visible and isinstance(self.matrix[x][y].type, int):
-                    closemines = self.matrix[x][y].type
-                    novis = 0
-                    flags = 0
-                    for s in self.matrix[x][y].arround:
-                        if s.visible == False:
-                            novis += 1
-                        if s.flagged == False:
-                            flags += 1
-                    if closemines == novis:
-                        for s in self.matrix[x][y].arround:
-                            if s.visible == False:
-                                s.flagged = True
-                    elif closemines == flags:
-                        for s in self.matrix[x][y].arround:
-                            if s.visible == False and s.flagged == False:
-                                s.visible = True
-                    else:
-                        pass#ohh boy here we go
+            notvisible = 0
+            flags = 0
+            for s in scuare.arround:
+                if s.visible == False:
+                    notvisible += 1
+            if scuare.visible and notvisible != 0 and isinstance(scuare.type, int):
+                closemines = int(scuare.type)
+                #counts non visible and flagged scuares arround
+                if closemines == notvisible:
+                    for s in scuare.arround:
+                        if not s.visible and not s.flagged:
+                            s.flagged = True
+                            self.image(s)
+                            self.flags -= 1
+                for s in scuare.arround:
+                    if s.flagged == True:
+                        flags += 1
+                if closemines == flags:
+                    for s in scuare.arround:
+                        if not s.visible and not s.flagged:
+                            s.visible = True
+                            self.image(s)
+                            if s.type == "empty":
+                                self.search()
+                self.image(scuare)
+                self.show()
+                pygame.display.flip()
+            #pygame.time.delay(10)
 
     def show(self):
         #shows all scuares in the grid
@@ -248,6 +255,7 @@ class Grid():
             pygame.draw.line(self.screen,(0,100,0),(x,self.startpos[1]),(x,self.startpos[1]+480))
         for y in range(self.startpos[1],self.startpos[1]+480+1,self.size[1]):
             pygame.draw.line(self.screen,(0,100,0),(self.startpos[0],y),(self.startpos[0]+760,y))
+        return self.flags
 
 class Start():
     def __init__(self, screen, font):
@@ -304,37 +312,38 @@ class Game():#playing leave win loose
                 if state[0]:#left click
                     if self.exitbutton.check_click(mousepos):
                         self.state = "start"
-                    elif self.grid.started:
+                    if self.grid.started:
                         if self.flagsbutton.check_click(mousepos):
                             self.grid.revealall()
                         if self.autobutton.check_click(mousepos):
-                            #self.grid.Auto()
-                            print("wip")
+                            #auto = True
+                            #while auto:
+                            self.grid.Auto()
+                                #self.flags = self.grid.show()
                     if self.state == "playing":
                         self.grid.leftclick(mousepos)
                 if state[2]:#right click
                     if self.grid.started and self.state == "playing":
-                        self.flags = self.grid.rightclick(mousepos, self.flags)
+                        self.flags = self.grid.rightclick(mousepos)
                 if self.state == "playing":
                     self.state = self.grid.winloose()
 
     def show(self):
         #background
         self.screen.fill((169, 237, 43))
+        #shows grid
+        self.flags = self.grid.show()
         #shows auto flags and exit
         self.autobutton.show("Auto")
         self.flagsbutton.show(f"Flags: {self.flags}")
         self.exitbutton.show("Exit")
-        #shows grid
-        self.grid.show()
         pygame.display.flip()
 
     def run(self):
         while self.state == "playing":
             self.events()
             self.show()
-        if self.state == "loose":
-            pygame.time.delay(3000)
+        pygame.time.delay(3000)
         return self.state
 
 def main():#start playing quit win loose
