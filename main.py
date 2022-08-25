@@ -3,7 +3,7 @@ from pygame import mixer
 from Button import Button
 
 ScreenSize = (800,600)
-Difficulty = 5
+Difficulty = 8
 Multiplier = 25
 #MaxScuares = (38,24)
 #MineSize = (20,20)
@@ -272,24 +272,33 @@ class Grid():#(38,24),(20,100),(20,20)
                 if flaggedmines == self.mines:
                     workin = False
             self.flags = self.mines - flaggedmines
-            for sc in self.grid:
-                sc.high = False
+            for scuare in self.grid:
+                scuare.high = False
+            if probable:
+                print("probable")
+                for scuare in self.grid:
+                    number = False
+                    for sc in scuare.arround:
+                        if isinstance(sc.type, int) and sc.visible:
+                            number = True
+                    if not scuare.visible and not scuare.flagged and number:
+                        scuare.high = True
             self.show()
             pygame.display.flip()
             pygame.time.delay(1000)
             
-
     def show(self):
         #shows all scuares in the grid
         self.grid.draw(self.screen)
-        """for sc in self.grid:
-            if sc.high:
-                pygame.draw.rect(self.screen,(200,100,100),pygame.Rect(sc.rect,sc.size),1)"""
         #grid divisory lines
         for x in range(self.startpos[0],self.startpos[0]+760+1,self.size[0]):
             pygame.draw.line(self.screen,(0,100,0),(x,self.startpos[1]),(x,self.startpos[1]+480))
         for y in range(self.startpos[1],self.startpos[1]+480+1,self.size[1]):
             pygame.draw.line(self.screen,(0,100,0),(self.startpos[0],y),(self.startpos[0]+760,y))
+        #show highlight
+        for sc in self.grid:
+            if sc.high:
+                pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(sc.rect,sc.size),2)
         return self.flags
 
 class Start():
