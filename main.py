@@ -3,10 +3,14 @@ from pygame import mixer
 from Button import Button
 
 ScreenSize = (800,600)
-Difficulty = 8
+Difficulty = 6
 Multiplier = 25
 #MaxScuares = (38,24)
 #MineSize = (20,20)
+pygame.init()
+Font = pygame.font.SysFont('Comic Sans MS', 30)
+LilFont = pygame.font.SysFont('Comic Sans MS',10)
+Screen = pygame.display.set_mode(ScreenSize)
 
 class Scuare(pygame.sprite.Sprite):#visible flagged type checked probab arround
     def __init__(self, image, rect, size):
@@ -82,7 +86,7 @@ class Grid():#(38,24),(20,100),(20,20)
                     if right:
                         self.matrix[x][y].arround.append(self.matrix[x+1][y+1])
 
-    def image(self, scuare):
+    def image(self, scuare):#x
         if not scuare.visible:
             if scuare.flagged:
                 scuare.image = self.flag
@@ -112,8 +116,11 @@ class Grid():#(38,24),(20,100),(20,20)
             elif scuare.type == 8:
                 scuare.image = self.scu8
 
-    def leftclick(self, pos):
+    def leftclick(self, pos):#x
         if self.started:
+            for scuare in self.grid:
+                scuare.high = False
+                scuare.probab = 0
             for scuare in self.grid:
                 if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
                     if not scuare.visible and not scuare.flagged:
@@ -126,8 +133,21 @@ class Grid():#(38,24),(20,100),(20,20)
                         self.image(scuare)
         elif self.startpos[0]<pos[0] and pos[0]<self.startpos[0]+(self.cuantity[0]*self.size[0]) and self.startpos[1]<pos[1] and pos[1]<self.startpos[1]+(self.cuantity[1]*self.size[1]):
             self.defineall(pos)
+    
+    def rightclick(self, pos):#x
+        for scuare in self.grid:
+            if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
+                if not scuare.visible:
+                    if scuare.flagged:#flag to scuare
+                        scuare.flagged = False
+                        self.image(scuare)
+                        self.flags += 1
+                    elif self.flags>0 and not scuare.flagged:#scuare to flag
+                        scuare.flagged = True
+                        self.image(scuare)
+                        self.flags -= 1
 
-    def defineall(self,pos):
+    def defineall(self,pos):#x
         #places the mines
         for scuare in self.grid:
             if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
@@ -161,7 +181,7 @@ class Grid():#(38,24),(20,100),(20,20)
             scuare.checked = False
         self.search()
 
-    def search(self):
+    def search(self):#x
         looking = True
         while looking:
             looking = False
@@ -175,47 +195,68 @@ class Grid():#(38,24),(20,100),(20,20)
                         a.visible = True
                         self.image(a)
                         
-    def rightclick(self, pos):
-        for scuare in self.grid:
-            if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
-                if not scuare.visible:
-                    if scuare.flagged:#flag to scuare
-                        scuare.flagged = False
-                        self.image(scuare)
-                        self.flags += 1
-                    elif self.flags>0 and not scuare.flagged:#scuare to flag
-                        scuare.flagged = True
-                        self.image(scuare)
-                        self.flags -= 1
-    
-    def revealmines(self):
+    def revealmines(self):#x
         for scuare in self.grid:
             if scuare.type == "mine":
                 scuare.visible = True
                 scuare.image = self.mine
                 self.image(scuare)
     
-    def revealall(self):
+    def revealall(self):#x
         for scuare in self.grid:
             scuare.visible = True
             self.image(scuare)
     
-    def winloose(self):
-        gamestate = "playing"
-        flaggedmines = 0
+    def minesleft(self):#x
+        minesleft = self.mines
+        lost = False
         for scuare in self.grid:
+            if scuare.type == "mine" and scuare.flagged:
+                minesleft -= 1
             if scuare.type == "explodedmine":
-                gamestate = "loose"
-            elif scuare.type == "mine":
-                if scuare.flagged:
-                    flaggedmines += 1
-        if flaggedmines == self.mines:
-            gamestate = "win"
-        if gamestate != "playing":
-            print(gamestate)
-        return gamestate
+                lost = True
+        if lost:
+            minesleft = -1
+        return minesleft
     
+    def FlagNReveal(self, scuare):
+        update = False
+        notvisible = 0
+        flags = 0
+        closemines = int(scuare.type)
+        for s in scuare.arround:#counts non visible and flagged scuares arround
+            if not s.visible:
+                notvisible += 1
+        if closemines == notvisible:# flags mines
+            update = True
+            scuare.checked = True
+            for s in scuare.arround:
+                if not s.visible:
+                    s.checked = True
+                    s.flagged = True
+                    self.image(s)
+                    flags -= 1
+        for s in scuare.arround:
+            if s.flagged:
+                flags += 1
+        if closemines == flags:# reveals non mines
+            update = True
+            scuare.checked = True
+            for s in scuare.arround:
+                if not s.visible and not s.flagged:
+                    s.visible = True
+                    self.image(s)
+                    if s.type == "empty":
+                        self.search()
+        #         if neither probable = True
+        self.image(scuare)
+        return update
+
     def Auto(self):#make show flags in real time
+        for scuare in self.grid:
+            scuare.high = False
+            scuare.probab = 0
+        self.show()
         workin = True
         probable = False
         while workin and not probable:
@@ -223,55 +264,25 @@ class Grid():#(38,24),(20,100),(20,20)
             for scuare in self.grid:
                 scuare.high = True
                 update = False
-                if not scuare.checked:
-                    notvisible = 0
-                    flags = 0
-                    if scuare.visible and isinstance(scuare.type, int):
-                        closemines = int(scuare.type)
-                        #counts non visible and flagged scuares arround
-                        for s in scuare.arround:
-                            if not s.visible:
-                                notvisible += 1
-                        # flags mines
-                        if closemines == notvisible:
-                            probable = False
-                            update = True
-                            scuare.checked = True
-                            for s in scuare.arround:
-                                if not s.visible:
-                                    s.checked = True
-                                    s.flagged = True
-                                    self.image(s)
-                                    flags -= 1
-                        for s in scuare.arround:
-                            if s.flagged:
-                                flags += 1
-                        # reveals non mines
-                        if closemines == flags:
-                            probable = False
-                            update = True
-                            scuare.checked = True
-                            for s in scuare.arround:
-                                if not s.visible and not s.flagged:
-                                    s.visible = True
-                                    self.image(s)
-                                    if s.type == "empty":
-                                        self.search()
-                        #if neither probable = True
-                        self.image(scuare)
+                #does all the flagging and revealing 
+                if not scuare.checked and scuare.visible and isinstance(scuare.type, int):
+                    update = self.FlagNReveal(scuare)
+                    if update:
+                        probable = False
                 if update:
-                    self.show()
+                    self.grid.draw(self.screen)
+                    for x in range(self.startpos[0],self.startpos[0]+760+1,self.size[0]):
+                        pygame.draw.line(self.screen,(0,100,0),(x,self.startpos[1]),(x,self.startpos[1]+480))
+                    for y in range(self.startpos[1],self.startpos[1]+480+1,self.size[1]):
+                        pygame.draw.line(self.screen,(0,100,0),(self.startpos[0],y),(self.startpos[0]+760,y))
                 for sc in self.grid:
                     if sc.high:
                         pygame.draw.rect(self.screen,(0,100,0),pygame.Rect(sc.rect,sc.size),1)
                 pygame.display.flip()
-            flaggedmines = 0
-            for scuare in self.grid:
-                if scuare.type == "mine" and scuare.flagged:
-                    flaggedmines += 1
-                if flaggedmines == self.mines:
-                    workin = False
-            self.flags = self.mines - flaggedmines
+            minesleft = self.minesleft()
+            if minesleft<1:
+                workin = False
+            self.flags = minesleft
             for scuare in self.grid:
                 scuare.high = False
             if probable:
@@ -285,11 +296,23 @@ class Grid():#(38,24),(20,100),(20,20)
                         scuare.high = True
             self.show()
             pygame.display.flip()
-            pygame.time.delay(1000)
-            
-    def show(self):
+        if probable:
+            for scuare in self.grid:
+                if scuare.high:
+                    n = 0
+                    for sc in scuare.arround:
+                        if isinstance(sc.type, int) and sc.visible:
+                            n += 1
+                    scuare.probab = n
+
+    def show(self):#x
         #shows all scuares in the grid
         self.grid.draw(self.screen)
+        for sc in self.grid:
+            if sc.probab != 0:
+                text = LilFont.render(str(sc.probab),True, (0,0,0))
+                text_rect = text.get_rect(center=(sc.rect[0]+sc.size[0]/2,sc.rect[1]+sc.size[1]/2))
+                self.screen.blit(text, text_rect)
         #grid divisory lines
         for x in range(self.startpos[0],self.startpos[0]+760+1,self.size[0]):
             pygame.draw.line(self.screen,(0,100,0),(x,self.startpos[1]),(x,self.startpos[1]+480))
@@ -356,22 +379,25 @@ class Game():#playing leave win loose
                 if state[0]:#left click
                     if self.exitbutton.check_click(mousepos):
                         self.state = "start"
-                    if self.grid.started:
-                        if self.flagsbutton.check_click(mousepos):
-                            self.grid.revealall()
-                        if self.autobutton.check_click(mousepos):
-                            #auto = True
-                            #while auto:
-                            self.grid.Auto()
-                                #self.flags = self.grid.show()
+                    if self.grid.started and self.flagsbutton.check_click(mousepos):
+                        self.grid.revealall()
+                    if self.grid.started and self.autobutton.check_click(mousepos):
+                        self.grid.Auto()
                     if self.state == "playing":
-                        self.grid.leftclick(mousepos)
+                        if 20<=mousepos[0] and mousepos[0]<=(20+(38*20)) and 100<=mousepos[1] and mousepos[1]<=(100+(24*20)):#agregar valores predet
+                            self.grid.leftclick(mousepos)
                 if state[2]:#right click
                     if self.grid.started and self.state == "playing":
                         self.flags = self.grid.rightclick(mousepos)
                 if self.state == "playing":
-                    self.state = self.grid.winloose()
-
+                    minesleft = self.grid.minesleft()
+                    if minesleft == -1:
+                        self.state = "lose"
+                    elif minesleft == 0:
+                        self.state = "win"
+                    else:
+                        self.state = "playing"
+                    
     def show(self):
         #background
         self.screen.fill((169, 237, 43))
@@ -387,20 +413,18 @@ class Game():#playing leave win loose
         while self.state == "playing":
             self.events()
             self.show()
-        if self.state != "start":
+        if self.state == "lose" or self.state == "win":
+            print(self.state)
             pygame.time.delay(2000)
         return "start"
 
 def main():#start playing quit win loose
-    pygame.init()
-    mixer.pre_init(44100, 16, 2, 4096)
-    mixer.init()
+    """mixer.pre_init(44100, 16, 2, 4096)
+    mixer.init()"""
     pygame.event.set_allowed(pygame.QUIT)
     pygame.event.set_allowed(pygame.MOUSEBUTTONDOWN)
-    Screen = pygame.display.set_mode(ScreenSize)
     pygame.display.set_caption("Mine Sweeper + Auto")
     pygame.font.init()
-    Font = pygame.font.SysFont('Comic Sans MS', 30)
     gamestate = "start"
     while gamestate != "quit":
         if gamestate == "start":
@@ -409,8 +433,6 @@ def main():#start playing quit win loose
         if gamestate == "playing":
             game = Game(Screen,Font,Difficulty,Multiplier)
             gamestate = game.run()
-        if gamestate == "loose" or gamestate == "win":
-            gamestate = "start"
     pygame.quit()
 
 if __name__ == "__main__":
