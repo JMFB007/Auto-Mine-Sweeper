@@ -1,3 +1,4 @@
+from math import gcd
 import pygame, random
 from pygame import mixer
 from Button import Button
@@ -22,9 +23,13 @@ class Scuare(pygame.sprite.Sprite):#visible flagged type checked probab arround
         self.image = image
         self.rect = rect
         self.size = size
+        self.posiblemines = 0
         self.probab = 0
         self.type = "empty"
         self.arround = []
+
+    def __str__(self):
+        return str(self.type)
 
 class Grid():#(38,24),(20,100),(20,20)
     def __init__(self, screen, mines, cuantity, startpos, size):
@@ -136,6 +141,9 @@ class Grid():#(38,24),(20,100),(20,20)
     
     def rightclick(self, pos):#x
         for scuare in self.grid:
+            scuare.high = False
+            scuare.probab = 0
+        for scuare in self.grid:
             if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
                 if not scuare.visible:
                     if scuare.flagged:#flag to scuare
@@ -244,11 +252,13 @@ class Grid():#(38,24),(20,100),(20,20)
             scuare.checked = True
             for s in scuare.arround:
                 if not s.visible and not s.flagged:
+                    if s.type == "mine":
+                        s.type = "explodedmine"
                     s.visible = True
                     self.image(s)
                     if s.type == "empty":
                         self.search()
-        #         if neither probable = True
+        #if neither probable = True
         self.image(scuare)
         return update
 
@@ -259,13 +269,14 @@ class Grid():#(38,24),(20,100),(20,20)
         self.show()
         workin = True
         probable = False
+        #Shows with the 100% or 0% logic
         while workin and not probable:
             probable = True
             for scuare in self.grid:
                 scuare.high = True
                 update = False
-                #does all the flagging and revealing 
-                if not scuare.checked and scuare.visible and isinstance(scuare.type, int):
+                #does all the flagging and revealing
+                if not scuare.checked and scuare.visible and isinstance(scuare.type, int):#convertir minas a rojas
                     update = self.FlagNReveal(scuare)
                     if update:
                         probable = False
@@ -286,7 +297,6 @@ class Grid():#(38,24),(20,100),(20,20)
             for scuare in self.grid:
                 scuare.high = False
             if probable:
-                print("probable")
                 for scuare in self.grid:
                     number = False
                     for sc in scuare.arround:
@@ -296,14 +306,46 @@ class Grid():#(38,24),(20,100),(20,20)
                         scuare.high = True
             self.show()
             pygame.display.flip()
+        #Shows otherwise
         if probable:
             for scuare in self.grid:
+                if scuare.high:
+                    scuare.checked = True
+                else:
+                    scuare.checked = False
+            groups = []
+            for scuare in self.grid:
+                if scuare.checked:
+                    groups.append(self.Group(scuare))
                 if scuare.high:
                     n = 0
                     for sc in scuare.arround:
                         if isinstance(sc.type, int) and sc.visible:
-                            n += 1
+                            ammount = 0
+                            for subsc in sc.arround:
+                                if subsc.flagged:
+                                    ammount += 1
+                            n += int(sc.type) - ammount
                     scuare.probab = n
+            print("group ammount: ",len(groups))
+            #make all mine arangements and count # of mines used for each
+            """for g in groups:
+                print("a")"""
+            #final probability
+
+    def Group(self, scuare):#highlighted = not checked
+        scuare.checked = False
+        g = [scuare]
+        done = False
+        while not done:
+            done = True
+            for sc in g:
+                for subsc in sc.arround:
+                    if subsc.checked:
+                        done = False
+                        subsc.checked = False
+                        g.append(subsc)
+        return g
 
     def show(self):#x
         #shows all scuares in the grid
