@@ -13,7 +13,7 @@ Font = pygame.font.SysFont('Comic Sans MS', 30)
 LilFont = pygame.font.SysFont('Comic Sans MS',10)
 Screen = pygame.display.set_mode(ScreenSize)
 
-class Scuare(pygame.sprite.Sprite):#visible flagged type checked probab arround
+class Scuare(pygame.sprite.Sprite):#visible flagged type checked posiblemines probab arround
     def __init__(self, image, rect, size):
         super().__init__()
         self.visible = False
@@ -30,6 +30,12 @@ class Scuare(pygame.sprite.Sprite):#visible flagged type checked probab arround
 
     def __str__(self):
         return str(self.type)
+
+class Node():
+    def __init__(self, scuare):
+        self.scuare = scuare
+        self.left = None
+        self.right = None
 
 class Grid():#(38,24),(20,100),(20,20)
     def __init__(self, screen, mines, cuantity, startpos, size):
@@ -125,7 +131,7 @@ class Grid():#(38,24),(20,100),(20,20)
         if self.started:
             for scuare in self.grid:
                 scuare.high = False
-                scuare.probab = 0
+                scuare.posiblemines = 0
             for scuare in self.grid:
                 if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
                     if not scuare.visible and not scuare.flagged:
@@ -142,7 +148,7 @@ class Grid():#(38,24),(20,100),(20,20)
     def rightclick(self, pos):#x
         for scuare in self.grid:
             scuare.high = False
-            scuare.probab = 0
+            scuare.posiblemines = 0
         for scuare in self.grid:
             if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
                 if not scuare.visible:
@@ -265,7 +271,7 @@ class Grid():#(38,24),(20,100),(20,20)
     def Auto(self):#make show flags in real time
         for scuare in self.grid:
             scuare.high = False
-            scuare.probab = 0
+            scuare.posiblemines = 0
         self.show()
         workin = True
         probable = False
@@ -304,6 +310,7 @@ class Grid():#(38,24),(20,100),(20,20)
                             number = True
                     if not scuare.visible and not scuare.flagged and number:
                         scuare.high = True
+            print(workin, update)
             self.show()
             pygame.display.flip()
         #Shows otherwise
@@ -313,6 +320,7 @@ class Grid():#(38,24),(20,100),(20,20)
                     scuare.checked = True
                 else:
                     scuare.checked = False
+            #makes groups for each section of probability
             groups = []
             for scuare in self.grid:
                 if scuare.checked:
@@ -326,12 +334,61 @@ class Grid():#(38,24),(20,100),(20,20)
                                 if subsc.flagged:
                                     ammount += 1
                             n += int(sc.type) - ammount
-                    scuare.probab = n
+                    scuare.posiblemines = n
             print("group ammount: ",len(groups))
             #make all mine arangements and count # of mines used for each
-            """for g in groups:
-                print("a")"""
+            for g in groups:
+                group = g[:]
+                group = self.Tree(group)
+                for sc, psc in zip(g, group):
+                    sc.probab = psc.probab
+                    print(sc.posiblemines,": ",sc.probab)
             #final probability
+
+    def Tree(self, group):
+        root = Node(group[0])
+        for sc in group:
+
+    def Prob(self,g):
+        for i in g:
+            i.checked = True
+        for sc in g:#cuadro
+            obvio = False
+            tienemina = False
+            for subsc in sc.arround:#es obvio? (alrededor del inicial) x
+                if subsc.visible and not subsc.flagged and isinstance(subsc.type, int) and not subsc.checked:
+                    ammount = int(subsc.type)
+                    invis = 0
+                    for a in sc.arround:#conteo banderas y vacios por alrededor del inicial
+                        if a.flagged:
+                            ammount -= 1
+                        elif not a.visible:
+                            invis += 1
+                    if ammount == invis:
+                        obvio = True
+                        tienemina = True
+                    elif ammount == 0:
+                        obvio = True
+                        tienemina = False
+            if obvio:#SI
+                if tienemina:#ejecuta
+                    sc.flagged = True
+                    sc.probab += 1
+                else:
+                    sc.visible = True
+            else:#NO
+                gx = g[g.index(sc):]
+                gx[0].flagged = True
+                gx = self.Prob(gx)
+                gy = g[g.index(sc):]
+                gy[0].visible = True
+                gy = self.Prob(gy)
+                ind = g.index(sc)
+                for x, y in zip(gx, gy):
+                    g[ind].probab = x.probab + y.probab
+                    ind += 1
+                break
+        return g
 
     def Group(self, scuare):#highlighted = not checked
         scuare.checked = False
@@ -351,8 +408,8 @@ class Grid():#(38,24),(20,100),(20,20)
         #shows all scuares in the grid
         self.grid.draw(self.screen)
         for sc in self.grid:
-            if sc.probab != 0:
-                text = LilFont.render(str(sc.probab),True, (0,0,0))
+            if sc.posiblemines != 0:
+                text = LilFont.render(str(sc.posiblemines),True, (0,0,0))
                 text_rect = text.get_rect(center=(sc.rect[0]+sc.size[0]/2,sc.rect[1]+sc.size[1]/2))
                 self.screen.blit(text, text_rect)
         #grid divisory lines
