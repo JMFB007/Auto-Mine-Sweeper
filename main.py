@@ -2,6 +2,7 @@ from math import gcd
 import pygame, random
 from pygame import mixer
 from Button import Button
+from Tree import Tree
 
 ScreenSize = (800,600)
 Difficulty = 6
@@ -30,12 +31,6 @@ class Scuare(pygame.sprite.Sprite):#visible flagged type checked posiblemines pr
 
     def __str__(self):
         return str(self.type)
-
-class Node():
-    def __init__(self, scuare):
-        self.scuare = scuare
-        self.left = None
-        self.right = None
 
 class Grid():#(38,24),(20,100),(20,20)
     def __init__(self, screen, mines, cuantity, startpos, size):
@@ -344,10 +339,6 @@ class Grid():#(38,24),(20,100),(20,20)
                     sc.probab = psc.probab
                     print(sc.posiblemines,": ",sc.probab)
             #final probability
-
-    def Tree(self, group):
-        root = Node(group[0])
-        for sc in group:
 
     def Prob(self,g):
         for i in g:
