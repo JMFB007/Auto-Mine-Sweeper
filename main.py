@@ -2,7 +2,7 @@ from math import gcd
 import pygame, random
 from pygame import mixer
 from Button import Button
-from Tree import Tree
+from Posibilities import posibilities
 
 ScreenSize = (800,600)
 Difficulty = 6
@@ -333,53 +333,10 @@ class Grid():#(38,24),(20,100),(20,20)
             print("group ammount: ",len(groups))
             #make all mine arangements and count # of mines used for each
             for g in groups:
-                group = g[:]
-                group = self.Tree(group)
-                for sc, psc in zip(g, group):
-                    sc.probab = psc.probab
-                    print(sc.posiblemines,": ",sc.probab)
+                counter = posibilities(g)
+                print(counter)
             #final probability
 
-    def Prob(self,g):
-        for i in g:
-            i.checked = True
-        for sc in g:#cuadro
-            obvio = False
-            tienemina = False
-            for subsc in sc.arround:#es obvio? (alrededor del inicial) x
-                if subsc.visible and not subsc.flagged and isinstance(subsc.type, int) and not subsc.checked:
-                    ammount = int(subsc.type)
-                    invis = 0
-                    for a in sc.arround:#conteo banderas y vacios por alrededor del inicial
-                        if a.flagged:
-                            ammount -= 1
-                        elif not a.visible:
-                            invis += 1
-                    if ammount == invis:
-                        obvio = True
-                        tienemina = True
-                    elif ammount == 0:
-                        obvio = True
-                        tienemina = False
-            if obvio:#SI
-                if tienemina:#ejecuta
-                    sc.flagged = True
-                    sc.probab += 1
-                else:
-                    sc.visible = True
-            else:#NO
-                gx = g[g.index(sc):]
-                gx[0].flagged = True
-                gx = self.Prob(gx)
-                gy = g[g.index(sc):]
-                gy[0].visible = True
-                gy = self.Prob(gy)
-                ind = g.index(sc)
-                for x, y in zip(gx, gy):
-                    g[ind].probab = x.probab + y.probab
-                    ind += 1
-                break
-        return g
 
     def Group(self, scuare):#highlighted = not checked
         scuare.checked = False
