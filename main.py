@@ -330,11 +330,11 @@ class Grid():#(38,24),(20,100),(20,20)
                                     ammount += 1
                             n += int(sc.type) - ammount
                     scuare.posiblemines = n
-            print("group ammount: ",len(groups))
+            print("group ammount:", len(groups))
             #make all mine arangements and count # of mines used for each
             for g in groups:
                 counter = posibilities(g)
-                print(counter)
+                print("counter:", counter)
             #final probability
 
 
