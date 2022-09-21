@@ -25,29 +25,33 @@ def checkposib(sc):
 
 def posibilities(group):
     #only the ones arround are true checked
-    for sc in group:
-        for a in sc.arround:
+    for scuare in group:#only the NOT highlighted ones are checked
+        for a in scuare.arround:
             a.checked = True
-    for sc in group:
-        sc.checked = False
+    for scuare in group:
+        scuare.checked = False
     counter = [0 for i in range(len(group))]
     posibilities = [posib(group)]
     done = False
+
+    """done: False len posib: 1
+   not full check
+   not full check
+   split check"""
+
     while not done:#runs through all groups
         done = True
-        for g in posibilities:#list of groups
-            print("over")
-            #print("   pos a:",len(posibilities))
-            if not g.full:
-                for sc in g.group:#group of scuares
-                    if not sc.flagged or not sc.visible:
+        for group in posibilities:#works on groups if obvious
+            if not group.full:
+                for scuare in group.group:
+                    if not scuare.flagged and not scuare.visible:
                         obvious = False
                         mined = False
-                        for a in sc.arround:#arround each scuare
+                        for a in scuare.arround:#arround each scuare
                             if isinstance(a.type, int) and a.visible:
                                 ammount = int(a.type)
                                 invis = 0
-                                for a in sc.arround:
+                                for a in scuare.arround:
                                     if a.flagged and a.checked:
                                         ammount -= 1
                                     elif not a.visible and a.checked:
@@ -59,40 +63,57 @@ def posibilities(group):
                                     obvious = True
                                     mined = True
                         if obvious:
+                            print("obvious")
                             if mined:
-                                sc.flagged = True
+                                scuare.flagged = True
                             else:
-                                sc.visible = True
+                                scuare.visible = True
                         else:
-                            g.split = True
-                            sc.visible = True
-                            if checkposib(sc):
-                                posibilities.append(posib(g.group))
-                            sc.visible = False
-                            sc.flagged = True
-                            if not checkposib(sc):
-                                posibilities.append(posib(g.group))
-                            g.failed = True
+                            group.split = True
+
+        reveal = False
+        flag = False
+        for group in posibilities:#split = True if its in a non obvious point
+            if group.split:
+                for scuare in group.group:
+                    if not scuare.flagged and not scuare.visible:
+                        scuare.visible = True
+                        reveal = checkposib(scuare)
+                        scuare.visible = False
+                        scuare.flagged = True
+                        flag = checkposib(scuare)
+                        break
+                if reveal:
+                    newreveal = group.group[:]
+                    for scuare in newreveal:
+                        if not scuare.flagged and not scuare.visible:
+                            print("split and revealed")
+                            scuare.visible = True
                             break
-            g.full = True
-            for sc in g.group:#checks if full
-                if not sc.flagged and not sc.visible:
-                    done = False
-                    g.full = False
-        x = True
-        while x:
-            x = False
-            for g in posibilities:
-                if g.failed:
-                    posibilities.remove(g)
-                    x = True
-                    break
-                if g.split:
-                    pass
-        print("done?", done)
-    print("   posibilities:", len(posibilities))
-    for g in posibilities:#adds to the counter list
-        for sc in g.group:
-            if sc.flagged:
-                counter[g.group.index(sc)] += 1
+                    posibilities.append(posib(newreveal))
+                if flag:
+                    newflag = group.group[:]
+                    for scuare in newflag:
+                        if not scuare.flagged and not scuare.visible:
+                            print("split and flagged")
+                            scuare.flagged = True
+                            break
+                    posibilities.append(posib(newflag))
+        
+        for group in posibilities:#done = True if all posibilities are revelaed or flagged
+            if not group.full:
+                group.full = True
+                for scuare in group.group:
+                    if not scuare.flagged or not scuare.visible:
+                        print("not done")
+                        done = False
+                        group.full = False
+        
+        print("done:", done,"len posib:",len(posibilities))
+    print("TOTAL POSIBILITIES:", len(posibilities))
+
+    for group in posibilities:#adds to the counter list
+        for scuare in group.group:
+            if scuare.flagged:
+                counter[group.group.index(scuare)] += 1
     return counter
