@@ -1,4 +1,5 @@
 import pygame
+from Scuare import Scuare
 
 class posib():
     def __init__(self, group):
@@ -6,20 +7,62 @@ class posib():
         self.failed = False
         self.split = False
         self.group = group
-#turn into a list of lists that keeps going untill all are full
-#then count and add to the variable of the original list and return
-def checkposib(sc):
-    posible = True
-    for a in sc.arround:
-        if isinstance(a.type, int) and a.visible:#each number arround the scuare
+#multiplies by 2^n
+def checkposib(sc):#reveal, flag
+    flag = True
+    reveal = True
+    c = sc.copy()
+    c.flagged = True
+    for a in c.arround:
+        if isinstance(a.type, int) and a.visible and a.checked:#each number arround the scuare
+            ammount = int(a.type)
+            flagged = 0
+            invis = 0
             for sa in a.arround:#arround the numbers
-                ammount = int(a.type)
-                flagged = 0
-                if sa.checked and sa.flagged:
+                if sa.flagged:
                     flagged += 1
-            if ammount < flagged:#imposible
-                posible = False
-    return posible
+                if not sa.visible and not sa.flagged:
+                    invis += 1
+            print("ammount < flagged: ", ammount < flagged)
+            print("(flagged < ammount) and (invis == 0): ", (flagged + invis < ammount))
+            if ammount < flagged or (flagged + invis < ammount):#imposible
+                flag = False
+    c.flagged = False
+    c.visible = True
+    for a in c.arround:
+        if isinstance(a.type, int) and a.visible and a.checked:#each number arround the scuare
+            ammount = int(a.type)
+            flagged = 0
+            invis = 0
+            for sa in a.arround:#arround the numbers
+                if sa.flagged:
+                    flagged += 1
+                if not sa.visible and not sa.flagged:
+                    invis += 1
+            print("ammount < flagged: ", ammount < flagged)
+            print("(flagged < ammount) and (invis == 0): ", (flagged + invis < ammount))
+            if ammount < flagged or (flagged + invis < ammount):#imposible
+                reveal = False
+    return reveal, flag
+
+def obviousmined(sc):#flag, show
+    flag = False
+    show = False
+    for a in sc.arround:
+        if isinstance(a.type, int) and a.visible and a.checked:
+            ammount = int(a.type)
+            flagged = 0
+            invis = 0
+            for b in a.arround:
+                if b.flagged:
+                    flagged += 1
+                elif not b.visible and not b.flagged:
+                    invis += 1
+            if ammount - flagged == invis:#100% all mines
+                flag = True
+            if ammount == flagged:#100% all safe amount - flagged
+                show = True
+    return flag, show
 
 def acc(posibilities):
     total = len(posibilities)
@@ -34,19 +77,16 @@ def acc(posibilities):
         if group.failed:
             failed += 1
     print(f"TOTAL: {total}, tbd: {total-split-full-failed}, split: {split}, full: {full}, failed: {failed}")
-    print("------")
 
 def posibilities(group):
-    #only the ones arround are true checked
-    for scuare in group:#only the NOT highlighted ones are checked
-        for a in scuare.arround:
-            a.checked = True
-    for scuare in group:
+    for scuare in group:#only the checked ones should be taken into account
         scuare.checked = False
     counter = [0 for i in range(len(group))]
-    posibilities = [posib(group)]
+    ax = []
+    for sc in group:
+        ax.append(sc.copy())
+    posibilities = [posib(ax)]
     done = False
-    #todavia hay una posibilidad donde queda en tbd
     while not done:#runs through all groups
         acc(posibilities)
         done = True
@@ -54,30 +94,11 @@ def posibilities(group):
             if not group.full:
                 for scuare in group.group:
                     if not scuare.flagged and not scuare.visible:
-                        obvious = False
-                        mined = False
-                        for a in scuare.arround:#arround each scuare
-                            if isinstance(a.type, int) and a.visible:
-                                ammount = int(a.type)
-                                flagged = 0
-                                invis = 0
-                                for a in scuare.arround:
-                                    if a.checked:
-                                        if a.flagged:
-                                            flagged += 1
-                                        elif not a.visible:
-                                            invis += 1
-                                if ammount == invis:#100% all mines
-                                    obvious = True
-                                    mined = True
-                                elif ammount == flagged:#100% all safe
-                                    obvious = True
-                                #else it remains false in obvious
-                        if obvious:
-                            if mined:
-                                scuare.flagged = True
-                            else:
-                                scuare.visible = True
+                        flag, show = obviousmined(scuare)
+                        if flag:
+                            scuare.flagged = True
+                        elif show:
+                            scuare.visible = True
                         else:
                             group.split = True
         acc(posibilities)
@@ -87,19 +108,16 @@ def posibilities(group):
             if group.split:
                 for scuare in group.group:
                     if not scuare.flagged and not scuare.visible:
-                        scuare.visible = True
-                        reveal = checkposib(scuare)
-                        scuare.visible = False
-                        scuare.flagged = True
-                        flag = checkposib(scuare)
+                        reveal, flag = checkposib(scuare)
                         break
                 print(f"reveal: {reveal}, flag: {flag}")
                 if reveal:
-                    newreveal = group.group[:]
+                    newreveal = []
+                    for sc in group.group:
+                        newreveal.append(sc.copy())
                     full = True
                     for scuare in newreveal:
                         if not scuare.flagged and not scuare.visible:
-                            print("split and revealed")
                             full = False
                             scuare.visible = True
                             break
@@ -107,11 +125,12 @@ def posibilities(group):
                     r.full = full
                     posibilities.append(r)
                 if flag:
-                    newflag = group.group[:]
+                    newflag = []
+                    for sc in group.group:
+                        newflag.append(sc.copy())
                     full = True
                     for scuare in newflag:
                         if not scuare.flagged and not scuare.visible:
-                            print("split and flagged")
                             full = False
                             scuare.flagged = True
                             break
@@ -129,20 +148,35 @@ def posibilities(group):
                 if group.failed:
                     clear = False
                     posibilities.remove(group)
+
         for group in posibilities:# X done = True if all posibilities are revelaed or flagged
             if not group.full:
                 done = False
                 group.full = True
                 for scuare in group.group:
-                    if not scuare.flagged or not scuare.visible:
+                    if not scuare.flagged and not scuare.visible:
                         group.full = False
+        
+        """for group in posibilities:#verificador
+            if not group.full:
+                sh = []
+                for scuare in group.group:
+                    if scuare.flagged:
+                        sh.append(1)
+                    elif scuare.visible:
+                        sh.append(2)
+                    else:
+                        sh.append(0)
+                print(sh)"""
+        
         acc(posibilities)
         print("------------------")
+        pygame.time.delay(2000)
     print("TOTAL POSIBILITIES:", len(posibilities))
-    raise SystemExit(0)
 
     for group in posibilities:#adds to the counter list
         for scuare in group.group:
             if scuare.flagged:
                 counter[group.group.index(scuare)] += 1
+    #raise SystemExit(0)
     return counter

@@ -3,9 +3,10 @@ import pygame, random
 from pygame import mixer
 from Button import Button
 from Posibilities import posibilities
+from Scuare import Scuare
 
 ScreenSize = (800,600)
-Difficulty = 6
+Difficulty = 5
 Multiplier = 25
 #MaxScuares = (38,24)
 #MineSize = (20,20)
@@ -13,24 +14,6 @@ pygame.init()
 Font = pygame.font.SysFont('Comic Sans MS', 30)
 LilFont = pygame.font.SysFont('Comic Sans MS',10)
 Screen = pygame.display.set_mode(ScreenSize)
-
-class Scuare(pygame.sprite.Sprite):#visible flagged type checked posiblemines probab arround
-    def __init__(self, image, rect, size):
-        super().__init__()
-        self.visible = False
-        self.flagged = False
-        self.checked = False
-        self.high = False
-        self.image = image
-        self.rect = rect
-        self.size = size
-        self.posiblemines = 0
-        self.probab = 0
-        self.type = "empty"
-        self.arround = []
-
-    def __str__(self):
-        return str(self.type)
 
 class Grid():#(38,24),(20,100),(20,20)
     def __init__(self, screen, mines, cuantity, startpos, size):
@@ -126,7 +109,7 @@ class Grid():#(38,24),(20,100),(20,20)
         if self.started:
             for scuare in self.grid:
                 scuare.high = False
-                scuare.posiblemines = 0
+                scuare.probab = 0
             for scuare in self.grid:
                 if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
                     if not scuare.visible and not scuare.flagged:
@@ -143,7 +126,7 @@ class Grid():#(38,24),(20,100),(20,20)
     def rightclick(self, pos):#x
         for scuare in self.grid:
             scuare.high = False
-            scuare.posiblemines = 0
+            scuare.probab = 0
         for scuare in self.grid:
             if pygame.Rect.collidepoint(pygame.Rect(scuare.rect[0],scuare.rect[1],scuare.size[0],scuare.size[1]),pos):
                 if not scuare.visible:
@@ -263,6 +246,7 @@ class Grid():#(38,24),(20,100),(20,20)
         self.image(scuare)
         return update
 
+    #ERROR VISUAL CUANDO GENERA TRUE TRUE
     def Auto(self):#make show flags in real time
         for scuare in self.grid:
             scuare.high = False
@@ -333,10 +317,12 @@ class Grid():#(38,24),(20,100),(20,20)
             print("group ammount:", len(groups))
             #make all mine arangements and count # of mines used for each
             for g in groups:
+                for sc in self.grid:
+                    sc.checked = True
                 counter = posibilities(g)
                 print("counter:", counter)
-            #final probability
-
+                for sc, n in zip(g, counter):
+                    sc.probab = n
 
     def Group(self, scuare):#highlighted = not checked
         scuare.checked = False
@@ -356,8 +342,8 @@ class Grid():#(38,24),(20,100),(20,20)
         #shows all scuares in the grid
         self.grid.draw(self.screen)
         for sc in self.grid:
-            if sc.posiblemines != 0:
-                text = LilFont.render(str(sc.posiblemines),True, (0,0,0))
+            if sc.probab != 0:
+                text = LilFont.render(str(sc.probab),True, (0,0,0))
                 text_rect = text.get_rect(center=(sc.rect[0]+sc.size[0]/2,sc.rect[1]+sc.size[1]/2))
                 self.screen.blit(text, text_rect)
         #grid divisory lines
